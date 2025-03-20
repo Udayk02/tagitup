@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "tagit.helloWorld",
-        "title": "Hello World"
+        "command": "tagit.tagFile",
+        "title": "Tagit: Tag the Current File"
       }
     ]
   },
