@@ -17,7 +17,26 @@
         "command": "tagit.tagFile",
         "title": "Tagit: Tag the Current File"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tagit",
+          "title": "Tagit",
+          "icon": "resources/tagit.png"
+        }
+      ]
+    },
+    "views": {
+      "tagit": [
+        {
+          "id": "tagitTreeView",
+          "name": "Tagged files",
+          "icon": "resources/tagit.png",
+          "dataProvider": "tagitProvider"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
