@@ -14,13 +14,11 @@ export function activate(context: vscode.ExtensionContext) {
 	// refresh the data provider so that tree view also gets refreshed
 	// when the active editor changes
 	vscode.window.onDidChangeActiveTextEditor(editor => {
-		console.log("Active editor changed:", editor?.document.fileName);
 		tagitProvider.refresh(); // call refresh on the TreeDataProvider to update the entire tree
 	});
 
 	// listen for file rename events, this is only applicable for renames withing the vs code workspace
 	vscode.workspace.onDidRenameFiles(event => {
-		console.log("Files renamed:", event.files.map(renamedFile => ({ old: renamedFile.oldUri.toString(), new: renamedFile.newUri.toString() })));
 		event.files.forEach(renamedFile => {
 			const oldFileUriString = renamedFile.oldUri.toString();
 			const newFileUriString = renamedFile.newUri.toString();
@@ -29,28 +27,22 @@ export function activate(context: vscode.ExtensionContext) {
 			if (tags && tags.length > 0) {
 				setFileTags(newFileUriString, tags, workspaceState);    // set tags for new URI
 				clearFileTags(oldFileUriString, workspaceState);      // remove tags from old URI
-				console.log(`Tags migrated from renamed file: ${oldFileUriString} to ${newFileUriString}`);
 				tagitProvider.refresh(); // refresh tree view to update file paths
-			} else {
-				console.log(`No tags to migrate for renamed file: ${oldFileUriString}`);
 			}
 		});
 	});
 
 	// listen for the file deletions
 	vscode.workspace.onDidDeleteFiles(event => {
-		console.log("Files deleted:", event.files.map(deletedFile => deletedFile.toString()));
 		event.files.forEach(deletedFile => {
 			const deletedFileUriString = deletedFile.toString();
 			clearFileTags(deletedFileUriString, workspaceState); // remove tags for the deleted file
-			console.log(`Tags removed for deleted file: ${deletedFileUriString}`);
 		});
 		tagitProvider.refresh(); // refresh tree view to update file paths
 	});
 
 	vscode.window.onDidChangeWindowState(windowState => {
 		if (windowState.focused) {
-			console.log("VS Code window gained focus, refreshing Tagit view.");
 			tagitProvider.refresh();
 		}
 	});
@@ -87,8 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			setFileTags(filePath, tags, workspaceState);			// store the tags into the workspace
-			console.log(`File: ${filePath}, Tags: ${tags}`);
-
+		
 			vscode.window.showInformationMessage(`Tags added to the current file.`);
 			tagitProvider.refresh();	// refresh
 		} else {
@@ -142,7 +133,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 		const updatedTags = currentTags.filter(tag => tag !== tagToRemove); // Remove the specific tag
 		setFileTags(fileUriString, updatedTags, workspaceState);
-		console.log(`Tag "${tagToRemove}" removed from active file: ${fileUriString}`);
 		vscode.window.showInformationMessage(`Tag "${tagToRemove}" removed from the active file.`);
 		tagitProvider.refresh(); // Refresh the tree view
 	});
@@ -227,7 +217,7 @@ function setFileTags(filePath: string, tags: string[], workspaceState: vscode.Me
 	const uniqueTags = [...new Set(tags)];
 	workspaceState.update(filePath, uniqueTags).then(
 		() => { 
-			console.log(`Successully updated tags for ${filePath}`);
+			// console.log(`Successully updated tags for ${filePath}`);
 		},
 		(reason) => {
 			vscode.window.showErrorMessage(`Failed to save tags for ${filePath}. Reason: ${reason}`);
@@ -261,10 +251,6 @@ async function cleanupWorkspaceState(workspaceState: vscode.Memento): Promise<vo
 			if (error.code === 'FileNotFound' || error.code === 'ENOENT') {
 				// File not found, remove from workspace state
 				await workspaceState.update(fileUriString, undefined);
-				console.log(`Removed stale file entry from workspace state: ${fileUriString}`);
-			} else {
-				// Other errors (e.g., permission issues), log them but don't remove
-				console.error(`Error checking file existence for ${fileUriString}:`, error);
 			}
 		}
 	}
