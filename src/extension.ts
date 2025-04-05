@@ -71,13 +71,21 @@ export function activate(context: vscode.ExtensionContext) {
 
 		const filePath = editor.document.uri.toString();	// uri is the vscode's representation for a resource
 		const tagsInput = await vscode.window.showInputBox({
-			prompt: `Enter tags (comma-separated)`,
+			prompt: `Enter tags (comma-separated, no space allowed)`,
 			placeHolder: `e.g., #stack, #heap`,
 			value: getFileTags(filePath, workspaceState).join(", ")	// pre fill the input box with existing tags
 		});
 
 		if (tagsInput) {
-			const tags = tagsInput.split(",").map(tag => tag.trim());
+			const tags = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0);
+
+			// check for spaces in tags
+			const invalidTags = tags.filter(tag => /\s/.test(tag));
+			if (invalidTags.length > 0) {
+				vscode.window.showErrorMessage(`Tags cannot contain spaces. Invalid tags: ${invalidTags.join(', ')}`);
+				return;
+			}
+
 			setFileTags(filePath, tags, workspaceState);			// store the tags into the workspace
 			console.log(`File: ${filePath}, Tags: ${tags}`);
 
@@ -158,11 +166,6 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		// process the input into an array of tags
-		const searchTags = input.split(',')
-			.map(tag => tag.trim())
-			.filter(tag => tag.length > 0);
-
 		// iterate over all files (keys from workspaceState) and filter
 		const matchedItems: FileQuickPickItem[] = [];
 		for (const fileUriString of workspaceState.keys()) {
@@ -223,8 +226,13 @@ function getFileTags(filePath: string, workspaceState: vscode.Memento): string[]
 function setFileTags(filePath: string, tags: string[], workspaceState: vscode.Memento) {
 	const uniqueTags = [...new Set(tags)];
 	workspaceState.update(filePath, uniqueTags).then(
-		() => { /* success, do nothing. */ },
-		(reason) => console.error("Failed to update tags for file:", filePath, reason)
+		() => { 
+			console.log(`Successully updated tags for ${filePath}`);
+		},
+		(reason) => {
+			vscode.window.showErrorMessage(`Failed to save tags for ${filePath}. Reason: ${reason}`);
+			console.error("Failed to update tags for file:", filePath, reason)
+		}
 	);
 }
 
