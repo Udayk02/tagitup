@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import {  ActiveFileTagsItem, ActiveFileTagItem, TagCategoryItem, TaggedFileItem, FileQuickPickItem } from './items';
+import { parseTagQuery, TagExpression } from './tagexpression';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -140,77 +141,61 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// searchByTags command
 	const searchByTagsCommand = vscode.commands.registerCommand('tagit.searchByTags', async () => {
-		let quickPick = vscode.window.createQuickPick();
-		quickPick.title = 'Search Files by Tags';
-		quickPick.placeholder = 'Enter tags to search (comma-separated, e.g., #feature, #bug)';
-		quickPick.items = []; // initially empty results
+		// prompt the user to input comma-separated tags.
+		const input = await vscode.window.showInputBox({
+			prompt: 'Enter tag query (e.g., "#heap & #graph", "#linked_list | #graph", "(#heap & #tree) | #array")',
+			placeHolder: '#graph, #heap'
+		});
+		if (!input) {
+			return;
+		}
 
-		quickPick.onDidChangeValue(async (tagsInputValue) => {
-			console.log("onDidChangeValue triggered. Input value:", tagsInputValue);
-			// we need to filter the empty tags
-			const searchTags = tagsInputValue.split(",").map(tag => tag.trim()).filter(tag => tag !== '');
-			console.log("Search tags:", searchTags);
-			if (searchTags.length === 0) {
-				quickPick.items = []; // clear results if no tags entered
-				console.log("No search tags, clearing QuickPick items.");
-				return;
+		let queryExpression: TagExpression;
+		try {
+			queryExpression = parseTagQuery(input);
+		} catch (err) {
+			vscode.window.showErrorMessage('Invalid tag query: ' + err);
+			return;
+		}
+
+		// process the input into an array of tags
+		const searchTags = input.split(',')
+			.map(tag => tag.trim())
+			.filter(tag => tag.length > 0);
+
+		// iterate over all files (keys from workspaceState) and filter
+		const matchedItems: FileQuickPickItem[] = [];
+		for (const fileUriString of workspaceState.keys()) {
+			const fileTags = getFileTags(fileUriString, workspaceState);
+			// check if any search tag exists in the file's tag list.
+			// const hasAny = searchTags.some(searchTag => fileTags.includes(searchTag));
+			if (queryExpression(fileTags)) {
+				const fileUri = vscode.workspace.asRelativePath(vscode.Uri.parse(fileUriString));
+				matchedItems.push({
+					label: fileUri,
+					description: fileTags.join(', '),
+					fileUri: fileUriString
+				});
 			}
+		}
 
-			const allFilePaths = workspaceState.keys();
-			console.log("All file paths in workspace state:", allFilePaths);
-			const matchingFiles: vscode.QuickPickItem[] = [];
+		if (matchedItems.length === 0) {
+			vscode.window.showInformationMessage('No files found with the specified tags.');
+			return;
+		}
 
-			for (const fileUriString of allFilePaths) {
-				const fileTags = getFileTags(fileUriString, workspaceState);
-				console.log(`File: ${fileUriString}, Tags: ${fileTags}`);
-				const hasMatchingTag = searchTags.some(searchTag => fileTags.includes(searchTag));
-				if (hasMatchingTag) {
-					matchingFiles.push({
-						label: vscode.workspace.asRelativePath(fileUriString), // relative path as label
-						description: fileTags.join(', ') || '(No tags)' // tags as description
-					});
-				}
-			}
-			console.log("Matching files found:", matchingFiles);
-			quickPick.items = matchingFiles; // update QuickPick items with search results
+		// Let the user select one of the matched files.
+		const selected = await vscode.window.showQuickPick(matchedItems, {
+			placeHolder: 'Select a file'
 		});
 
-		quickPick.onDidAccept(() => {
-			const selectedItems = quickPick.selectedItems;
-			if (selectedItems && selectedItems.length > 0) {
-				const firstSelectedItem = selectedItems[0];
-				const relativeFilePath = firstSelectedItem.label;	// relative path
-				
-				// current workspace thing, i don't need why this is handled like this
-				const workspaceFolders = vscode.workspace.workspaceFolders;
-				let workspaceFolderUri: vscode.Uri | undefined;
-		
-				if (workspaceFolders && workspaceFolders.length > 0) {
-					workspaceFolderUri = workspaceFolders[0].uri;
-				} else {
-					vscode.window.showErrorMessage('No workspace folder open to open file.');
-					quickPick.hide();
-					return;
-				}
-		
-				if (workspaceFolderUri) {
-					const fileUri = vscode.Uri.joinPath(workspaceFolderUri, relativeFilePath);
-		
-					vscode.workspace.openTextDocument(fileUri).then(document => {
-						vscode.window.showTextDocument(document);
-					}, error => {
-						vscode.window.showErrorMessage(`Error opening file: ${relativeFilePath}. ${error}`);
-					});
-				} else {
-					vscode.window.showErrorMessage('Workspace folder URI is not available.');
-				}
-			}
-			quickPick.hide();
-		});
-
-		quickPick.show();
+		if (selected && selected.fileUri) {
+			const fileUri = vscode.Uri.parse(selected.fileUri);
+			vscode.window.showTextDocument(fileUri);
+		}
 	});
-	
+
+
 	context.subscriptions.push(tagFileCommand);
 	context.subscriptions.push(clearWorkspaceStateCommand)
 	context.subscriptions.push(refreshTreeViewCommand);
@@ -363,7 +348,7 @@ class TagitProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 	private getFilesForTagItems(tag: string, workspaceState: vscode.Memento): vscode.TreeItem[] {
 		const allFilePaths = workspaceState.keys();
 		const fileItems: vscode.TreeItem[] = [];
-	
+
 		for (const fileUri of allFilePaths) {
 			const tagsForFile = getFileTags(fileUri, workspaceState);
 			if (tagsForFile.includes(tag)) {
@@ -373,7 +358,7 @@ class TagitProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 				fileItems.push(fileItem);
 			}
 		}
-	
+
 		if (fileItems.length === 0) {
 			return [new vscode.TreeItem('(No files with this tag)')];
 		} else {
@@ -414,66 +399,6 @@ class TagitProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 		});
 	}
 }
-
-/**
- * A class that represents "Active File Tags" item in the tree view
- */
-class ActiveFileTagsItem extends vscode.TreeItem {
-	constructor(label: string, private workspaceState: vscode.Memento) {
-		super(label, vscode.TreeItemCollapsibleState.Collapsed);
-	}
-}
-
-/**
- * TreeItem for a tag under "Active File Tags" with inline remove action.
- */
-class ActiveFileTagItem extends vscode.TreeItem {
-    constructor(
-        public readonly tagName: string, // store the tag name
-        private workspaceState: vscode.Memento
-    ) {
-        super("", vscode.TreeItemCollapsibleState.None); // make it a non-collapsible item
-        this.contextValue = 'activeFileTagItem';
-		this.iconPath = new vscode.ThemeIcon('close');
-		this.label = tagName;
-        this.command = {
-            command: 'tagit.removeActiveFileTag',
-            title: 'Remove Tag',
-            arguments: [this.tagName]
-        };
-        this.tooltip = `Remove tag "${tagName}" from the active file`;
-    }
-}
-
-/**
- * TreeItem for a tag/category in the "Tags" section.
- */
-class TagCategoryItem extends vscode.TreeItem {
-	constructor(public readonly tagName: string, private workspaceState: vscode.Memento) {
-		super(tagName, vscode.TreeItemCollapsibleState.Collapsed);
-		this.contextValue = "tag";
-	}
-}
-
-/**
- * TreeItem for a file listed under a tag/category in the "Tags" section.
- */
-class TaggedFileItem extends vscode.TreeItem {
-	// both relativePath and filePath are needed
-	// relativePath is for labelling the item and filePath is for looking for the tags
-	constructor(public readonly fileUri: string, relativePath: string) {
-		const filename = path.basename(relativePath);
-		super(filename, vscode.TreeItemCollapsibleState.None); // label is the filename and the item is not expandable
-		this.contextValue = 'taggedFileItem';
-		this.resourceUri = vscode.Uri.parse(fileUri); // set resourceUri so that when clicked opens that file
-		this.command = { // command to open file on click
-			command: 'vscode.open',
-			title: 'Open File',
-			arguments: [this.resourceUri]
-		};
-	}
-}
-
 
 // This method is called when your extension is deactivated
 export function deactivate() { }
