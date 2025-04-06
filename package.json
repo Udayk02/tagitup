@@ -16,7 +16,7 @@
     "organize",
     "file management"
   ],
-  "icon": "resources/tagitup.png",
+  "icon": "resources/tagituplogo.png",
   "activationEvents": [],
   "repository": {
     "url": "https://github.com/Udayk02/tagitup"
