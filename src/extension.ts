@@ -188,7 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 	context.subscriptions.push(tagFileCommand);
-	context.subscriptions.push(clearWorkspaceStateCommand)
+	context.subscriptions.push(clearWorkspaceStateCommand);
 	context.subscriptions.push(refreshTreeViewCommand);
 	context.subscriptions.push(removeActiveFileTagCommand);
 	context.subscriptions.push(searchByTagsCommand);
@@ -277,7 +277,7 @@ class TagitProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 		if (element instanceof ActiveFileTagsItem) {
 			// if an element is selected in the tree, show the children
 			return Promise.resolve(this.getActiveFileTagItems(this.workspaceState));
-		} else if (element && element.label == "Tags") {
+		} else if (element && element.label === "Tags") {
 			// list out all the tags under the "Tags" section
 			return Promise.resolve(this.getTagCategoryItems(this.workspaceState));
 		} else if (element instanceof TagCategoryItem) {

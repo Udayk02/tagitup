@@ -1,7 +1,8 @@
 {
+  "publisher": "uk02",
   "name": "tagit",
-  "displayName": "tagit",
-  "description": "",
+  "displayName": "TagIt",
+  "description": "Tag your files",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.98.0"
@@ -9,7 +10,17 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "tags",
+    "tagging",
+    "organize",
+    "file management"
+  ],
+  "icon": "resources/tagit.png",
   "activationEvents": [],
+  "repository": {
+    "url": "https://github.com/Udayk02/tagit"
+  },
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
