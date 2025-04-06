@@ -69,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
 			placeHolder: `e.g., #stack, #heap`,
 			value: getFileTags(filePath, workspaceState).join(", ")	// pre fill the input box with existing tags
 		});
-		console.log(`tags input: ${tagsInput}`);
+		
 		if (tagsInput) {
 			const tags = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0);
 			// store the tags into the workspace
@@ -213,10 +213,8 @@ function getFileTags(filePath: string, workspaceState: vscode.Memento): string[]
  * @returns boolean value stating whether the tags are set or not
  */
 async function setFileTags(filePath: string, tags: string[], workspaceState: vscode.Memento): Promise<boolean> {
-	console.log(`total tags: ${tags}`);
 	// check for spaces in tags
 	const invalidTags = tags.filter(tag => /\s/.test(tag));
-	console.log(`invalid tags: ${invalidTags}`);
 	if (invalidTags.length > 0) {
 		vscode.window.showErrorMessage(`Tags cannot contain spaces. Invalid tags: ${invalidTags.join(', ')}`);
 		return false;
