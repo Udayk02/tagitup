@@ -4,17 +4,17 @@ import { parseTagQuery, TagExpression } from './tagexpression';
 
 export function activate(context: vscode.ExtensionContext) {
 
-	console.log('Congratulations, your extension "tagit" is now active!');
+	console.log('Congratulations, your extension "TagitUp" is now active!');
 
 	const workspaceState = context.workspaceState;	// workspace state (kind of like a storage)
 
-	const tagitProvider = new TagitProvider(workspaceState);
+	const tagitupProvider = new TagitUpProvider(workspaceState);
 	// register the data provider
-	vscode.window.registerTreeDataProvider('tagitTreeView', tagitProvider);
+	vscode.window.registerTreeDataProvider('tagitupTreeView', tagitupProvider);
 	// refresh the data provider so that tree view also gets refreshed
 	// when the active editor changes
 	vscode.window.onDidChangeActiveTextEditor(() => {
-		tagitProvider.refresh(); // call refresh on the TreeDataProvider to update the entire tree
+		tagitupProvider.refresh(); // call refresh on the TreeDataProvider to update the entire tree
 	});
 
 	// listen for file rename events, this is only applicable for renames withing the vs code workspace
@@ -28,7 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
 				const success = await setFileTags(newFileUriString, tags, workspaceState);
 				if (success) {
 					clearFileTags(oldFileUriString, workspaceState);      // remove tags from old URI
-					tagitProvider.refresh(); // refresh tree view to update file paths
+					tagitupProvider.refresh(); // refresh tree view to update file paths
 				}    // set tags for new URI
 			}
 		});
@@ -40,17 +40,17 @@ export function activate(context: vscode.ExtensionContext) {
 			const deletedFileUriString = deletedFile.toString();
 			clearFileTags(deletedFileUriString, workspaceState); // remove tags for the deleted file
 		});
-		tagitProvider.refresh(); // refresh tree view to update file paths
+		tagitupProvider.refresh(); // refresh tree view to update file paths
 	});
 
 	vscode.window.onDidChangeWindowState(windowState => {
 		if (windowState.focused) {
-			tagitProvider.refresh();
+			tagitupProvider.refresh();
 		}
 	});
 
 	// async tagFile command
-	const tagFileCommand = vscode.commands.registerCommand('tagit.tagFile', async () => {
+	const tagFileCommand = vscode.commands.registerCommand('tagitup.tagFile', async () => {
 		// currently active text editor
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) {
@@ -76,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const success = await setFileTags(filePath, tags, workspaceState); 
 			if (success) {
 				vscode.window.showInformationMessage(`Tags added to the current file.`);
-				tagitProvider.refresh();	// refresh
+				tagitupProvider.refresh();	// refresh
 			}			
 		} else {
 			vscode.window.showInformationMessage(`Tagging cancelled.`);
@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	// clearWorkspaceState command
-	const clearWorkspaceStateCommand = vscode.commands.registerCommand('tagit.clearWorkspaceState', async () => {
+	const clearWorkspaceStateCommand = vscode.commands.registerCommand('tagitup.clearWorkspaceState', async () => {
 		const confirmation = await vscode.window.showInformationMessage(
 			'Are you sure you want to clear all the tags?',
 			{ modal: true }, // make it a modal dialog (requires user confirmation)
@@ -100,21 +100,21 @@ export function activate(context: vscode.ExtensionContext) {
 				await workspaceState.update(key, undefined);
 			}
 
-			vscode.window.showInformationMessage('Tagit workspace cleared.');
-			tagitProvider.refresh(); // refresh the tree view
+			vscode.window.showInformationMessage('TagitUp workspace cleared.');
+			tagitupProvider.refresh(); // refresh the tree view
 		} else {
 			vscode.window.showInformationMessage('Clear workspace cancelled.');
 		}
 	});
 
 	// refresh command
-	const refreshTreeViewCommand = vscode.commands.registerCommand('tagit.refreshTreeView', () => {
-		tagitProvider.refresh();
-		vscode.window.showInformationMessage('Tagit refreshed.');
+	const refreshTreeViewCommand = vscode.commands.registerCommand('tagitup.refreshTreeView', () => {
+		tagitupProvider.refresh();
+		vscode.window.showInformationMessage('TagitUp refreshed.');
 	});
 
 	// removeActiveFileTag command
-	const removeActiveFileTagCommand = vscode.commands.registerCommand('tagit.removeActiveFileTag', async (tagToRemove: string) => {
+	const removeActiveFileTagCommand = vscode.commands.registerCommand('tagitup.removeActiveFileTag', async (tagToRemove: string) => {
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) {
 			return; // No active editor
@@ -131,12 +131,12 @@ export function activate(context: vscode.ExtensionContext) {
 		const success = await setFileTags(fileUriString, updatedTags, workspaceState); 
 		if (success) {
 			vscode.window.showInformationMessage(`Tag "${tagToRemove}" removed from the active file.`);
-			tagitProvider.refresh(); // Refresh the tree view
+			tagitupProvider.refresh(); // Refresh the tree view
 		}
 	});
 
 	// searchByTags command
-	const searchByTagsCommand = vscode.commands.registerCommand('tagit.searchByTags', async () => {
+	const searchByTagsCommand = vscode.commands.registerCommand('tagitup.searchByTags', async () => {
 		// prompt the user to input comma-separated tags.
 		const input = await vscode.window.showInputBox({
 			prompt: 'Enter tag query (e.g., "#heap & #graph", "#linked_list | #graph", "(#heap & #tree) | #array")',
@@ -263,7 +263,7 @@ async function cleanupWorkspaceState(workspaceState: vscode.Memento): Promise<vo
 /**
  * A data provider class to display the tags in the sidebar
  */
-class TagitProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+class TagitUpProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 	private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | null | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
 	readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 

@@ -23,7 +23,7 @@ export class ActiveFileTagItem extends vscode.TreeItem {
 		this.iconPath = new vscode.ThemeIcon('close');
 		this.label = tagName;
 		this.command = {
-			command: 'tagit.removeActiveFileTag',
+			command: 'tagitup.removeActiveFileTag',
 			title: 'Remove Tag',
 			arguments: [this.tagName]
 		};

@@ -1,7 +1,7 @@
 {
   "publisher": "uk02",
-  "name": "tagit",
-  "displayName": "TagIt",
+  "name": "tagitup",
+  "displayName": "TagitUp",
   "description": "Tag your files",
   "version": "0.0.1",
   "engines": {
@@ -16,63 +16,63 @@
     "organize",
     "file management"
   ],
-  "icon": "resources/tagit.png",
+  "icon": "resources/tagitup.png",
   "activationEvents": [],
   "repository": {
-    "url": "https://github.com/Udayk02/tagit"
+    "url": "https://github.com/Udayk02/tagitup"
   },
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "tagit.tagFile",
-        "title": "Tagit: Tag the Current File"
+        "command": "tagitup.tagFile",
+        "title": "TagitUp: Tag the Current File"
       },
       {
-        "command": "tagit.clearWorkspaceState",
-        "title": "Tagit: Clear All the Tags"
+        "command": "tagitup.clearWorkspaceState",
+        "title": "TagitUp: Clear All the Tags"
       },
       {
-        "command": "tagit.refreshTreeView",
-        "title": "Tagit: Refresh",
+        "command": "tagitup.refreshTreeView",
+        "title": "TagitUp: Refresh",
         "icon": {
           "dark": "resources/refresh-white.png",
           "light": "resources/refresh-black.png"
         }
       },
       {
-        "command": "tagit.removeActiveFileTag",
-        "title": "Tagit: Remove Active File Tag"
+        "command": "tagitup.removeActiveFileTag",
+        "title": "TagitUp: Remove Active File Tag"
       },
       {
-        "command": "tagit.searchByTags",
-        "title": "Tagit: Search Files by Tags"
+        "command": "tagitup.searchByTags",
+        "title": "TagitUp: Search Files by Tags"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "tagit",
-          "title": "Tagit",
-          "icon": "resources/tagit.png"
+          "id": "tagitup",
+          "title": "TagitUp",
+          "icon": "resources/tagitup.png"
         }
       ]
     },
     "views": {
-      "tagit": [
+      "tagitup": [
         {
-          "id": "tagitTreeView",
+          "id": "tagitupTreeView",
           "name": "Tagged files",
-          "icon": "resources/tagit.png",
-          "dataProvider": "tagitProvider"
+          "icon": "resources/tagitup.png",
+          "dataProvider": "tagitupProvider"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "tagit.refreshTreeView",
-          "when": "view == tagitTreeView",
+          "command": "tagitup.refreshTreeView",
+          "when": "view == tagitupTreeView",
           "group": "navigation"
         }
       ]
