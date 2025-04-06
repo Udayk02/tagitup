@@ -13,21 +13,23 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.window.registerTreeDataProvider('tagitTreeView', tagitProvider);
 	// refresh the data provider so that tree view also gets refreshed
 	// when the active editor changes
-	vscode.window.onDidChangeActiveTextEditor(editor => {
+	vscode.window.onDidChangeActiveTextEditor(() => {
 		tagitProvider.refresh(); // call refresh on the TreeDataProvider to update the entire tree
 	});
 
 	// listen for file rename events, this is only applicable for renames withing the vs code workspace
 	vscode.workspace.onDidRenameFiles(event => {
-		event.files.forEach(renamedFile => {
+		event.files.forEach(async renamedFile => {
 			const oldFileUriString = renamedFile.oldUri.toString();
 			const newFileUriString = renamedFile.newUri.toString();
 
 			const tags = getFileTags(oldFileUriString, workspaceState); // get tags from old URI
 			if (tags && tags.length > 0) {
-				setFileTags(newFileUriString, tags, workspaceState);    // set tags for new URI
-				clearFileTags(oldFileUriString, workspaceState);      // remove tags from old URI
-				tagitProvider.refresh(); // refresh tree view to update file paths
+				const success = await setFileTags(newFileUriString, tags, workspaceState);
+				if (success) {
+					clearFileTags(oldFileUriString, workspaceState);      // remove tags from old URI
+					tagitProvider.refresh(); // refresh tree view to update file paths
+				}    // set tags for new URI
 			}
 		});
 	});
@@ -67,21 +69,15 @@ export function activate(context: vscode.ExtensionContext) {
 			placeHolder: `e.g., #stack, #heap`,
 			value: getFileTags(filePath, workspaceState).join(", ")	// pre fill the input box with existing tags
 		});
-
+		console.log(`tags input: ${tagsInput}`);
 		if (tagsInput) {
 			const tags = tagsInput.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0);
-
-			// check for spaces in tags
-			const invalidTags = tags.filter(tag => /\s/.test(tag));
-			if (invalidTags.length > 0) {
-				vscode.window.showErrorMessage(`Tags cannot contain spaces. Invalid tags: ${invalidTags.join(', ')}`);
-				return;
-			}
-
-			setFileTags(filePath, tags, workspaceState);			// store the tags into the workspace
-		
-			vscode.window.showInformationMessage(`Tags added to the current file.`);
-			tagitProvider.refresh();	// refresh
+			// store the tags into the workspace
+			const success = await setFileTags(filePath, tags, workspaceState); 
+			if (success) {
+				vscode.window.showInformationMessage(`Tags added to the current file.`);
+				tagitProvider.refresh();	// refresh
+			}			
 		} else {
 			vscode.window.showInformationMessage(`Tagging cancelled.`);
 		}
@@ -132,9 +128,11 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		const updatedTags = currentTags.filter(tag => tag !== tagToRemove); // Remove the specific tag
-		setFileTags(fileUriString, updatedTags, workspaceState);
-		vscode.window.showInformationMessage(`Tag "${tagToRemove}" removed from the active file.`);
-		tagitProvider.refresh(); // Refresh the tree view
+		const success = await setFileTags(fileUriString, updatedTags, workspaceState); 
+		if (success) {
+			vscode.window.showInformationMessage(`Tag "${tagToRemove}" removed from the active file.`);
+			tagitProvider.refresh(); // Refresh the tree view
+		}
 	});
 
 	// searchByTags command
@@ -212,18 +210,26 @@ function getFileTags(filePath: string, workspaceState: vscode.Memento): string[]
  * @param filePath The absolute path of the current file
  * @param tags The tags to be added to the file
  * @param workspaceState VSCode's workspace state memento
+ * @returns boolean value stating whether the tags are set or not
  */
-function setFileTags(filePath: string, tags: string[], workspaceState: vscode.Memento) {
+async function setFileTags(filePath: string, tags: string[], workspaceState: vscode.Memento): Promise<boolean> {
+	console.log(`total tags: ${tags}`);
+	// check for spaces in tags
+	const invalidTags = tags.filter(tag => /\s/.test(tag));
+	console.log(`invalid tags: ${invalidTags}`);
+	if (invalidTags.length > 0) {
+		vscode.window.showErrorMessage(`Tags cannot contain spaces. Invalid tags: ${invalidTags.join(', ')}`);
+		return false;
+	}
 	const uniqueTags = [...new Set(tags)];
-	workspaceState.update(filePath, uniqueTags).then(
-		() => { 
-			// console.log(`Successully updated tags for ${filePath}`);
-		},
-		(reason) => {
-			vscode.window.showErrorMessage(`Failed to save tags for ${filePath}. Reason: ${reason}`);
-			console.error("Failed to update tags for file:", filePath, reason)
-		}
-	);
+	try {
+		await workspaceState.update(filePath, uniqueTags);
+		return true;
+	}
+	catch(reason) {
+		vscode.window.showErrorMessage(`Failed to save tags for ${filePath}. Reason: ${reason}`);
+		return false;
+	};
 }
 
 /**
