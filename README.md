@@ -33,11 +33,14 @@ Note: There are a bunch of features that I can do further. Will do when time per
     *   **Active File Tags:** Displays tags associated with the currently focused file. Click the `(x)` icon next to a tag to remove it from the file.
     *   **Tags:** Lists all unique tags found in the workspace. Expand a tag to see all files associated with it. Click on a file name to open it.
 
+![Tag files, view active file tags and remove them](resources/gifs/tag-active-remove.gif)
+
 3.  **Commands (Access via Command Palette: Ctrl+Shift+P or Cmd+Shift+P):**
     *   **`TagitUp: Add/Edit Tags for Current File`**:
         *   Prompts you to enter comma-separated tags for the currently active file pre-filled with the existing tags of that file, if any.
         *   **Tag Rules:** Tags cannot contain spaces. `#` is an optional convention (e.g., `#heap`, `graph`, `linked_list` are all valid).
-        *   Use `#` though, it looks good.
+        *   Use `#` though, it looks good. 
+![View files categorized by tags and search tag expressions](resources/gifs/categories-search.gif)
     *   **`TagitUp: Search Files by Tags`**:
         *   Prompts you to enter a tag query.
         *   **Syntax:**
