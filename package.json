@@ -3,7 +3,7 @@
   "name": "tagitup",
   "displayName": "TagitUp",
   "description": "Tag your files",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.98.0"
   },
