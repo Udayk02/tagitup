@@ -16,3 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Searching by tag expression like #tag1 & #tag2 or (#tag1 | #tag2) & #tag3
     * Renaming and deletion of files within the VS Code does immediate to changes to tags as well along with the file.
 * Other commands like refreshing and clearing the entire workspace state to remove all the tags.
+
+## [0.0.2] - 2025-04-07
+
+### Changed
+
+*   Added a few GIF demonstrations to the README file for feature visualization in the Marketplace.
