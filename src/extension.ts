@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import {  ActiveFileTagsItem, ActiveFileTagItem, TagCategoryItem, TaggedFileItem, FileQuickPickItem } from './items';
 import { parseTagQuery, TagExpression } from './tagexpression';
+import * as os from 'os';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -186,12 +187,61 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	// exportTags command
+	const exportTagsCommand = vscode.commands.registerCommand('tagitup.exportTags', async () => {
+		const defaultFolder = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+            ? vscode.workspace.workspaceFolders[0].uri
+            : vscode.Uri.file(os.homedir());
+
+        const uri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.joinPath(defaultFolder, 'tagitup-tags-backup.json'),
+            filters: { 'JSON': ['json'] },
+            saveLabel: 'Save Tags Backup'
+        });
+
+        if (!uri) {
+            vscode.window.showInformationMessage('Export cancelled.');
+            return;
+        }
+
+        try {
+            await exportTagsToFile(workspaceState, uri);
+            vscode.window.showInformationMessage(`Tags exported to ${uri.fsPath}`);
+        } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to export tags: ${err}`);
+        }
+	});
+
+	// importTags command
+	const importTagsCommand = vscode.commands.registerCommand('tagitup.importTags', async () => {
+        const uris = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            filters: { 'JSON': ['json'] },
+            openLabel: 'Import Tags'
+        });
+
+        if (!uris || uris.length === 0) {
+            vscode.window.showInformationMessage('Import cancelled.');
+            return;
+        }
+
+        const uri = uris[0];
+        try {
+            await importTagsFromFile(workspaceState, uri, tagitupProvider);
+            vscode.window.showInformationMessage(`Tags imported from ${uri.fsPath}`);
+            tagitupProvider.refresh();
+        } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to import tags: ${err}`);
+        }
+    });
 
 	context.subscriptions.push(tagFileCommand);
 	context.subscriptions.push(clearWorkspaceStateCommand);
 	context.subscriptions.push(refreshTreeViewCommand);
 	context.subscriptions.push(removeActiveFileTagCommand);
 	context.subscriptions.push(searchByTagsCommand);
+	context.subscriptions.push(exportTagsCommand);
+	context.subscriptions.push(importTagsCommand);
 }
 
 /**
@@ -258,6 +308,93 @@ async function cleanupWorkspaceState(workspaceState: vscode.Memento): Promise<vo
 			}
 		}
 	}
+}
+
+/**
+ * Export all workspace tags into a JSON file at provided URI
+ */
+async function exportTagsToFile(workspaceState: vscode.Memento, fileUri: vscode.Uri): Promise<void> {
+    const keys = workspaceState.keys();
+    const payload: { exportedAt: string; data: Record<string, string[]> } = {
+        exportedAt: new Date().toISOString(),
+        data: {}
+    };
+
+    for (const key of keys) {
+        payload.data[key] = getFileTags(key, workspaceState);
+    }
+
+    const content = Buffer.from(JSON.stringify(payload, null, 2), 'utf8');
+    await vscode.workspace.fs.writeFile(fileUri, content);
+}
+
+/**
+ * Import tags from a JSON file and write them into workspaceState.
+ * Expected JSON shape: { exportedAt: "...", data: { "<fileUri>": ["#tag1", "#tag2"], ... } }
+ */
+async function importTagsFromFile(workspaceState: vscode.Memento, fileUri: vscode.Uri, provider?: TagitUpProvider): Promise<void> {
+    const bytes = await vscode.workspace.fs.readFile(fileUri);
+    const text = Buffer.from(bytes).toString('utf8');
+    let parsed: any;
+    try {
+        parsed = JSON.parse(text);
+    } catch (err) {
+        throw new Error('Invalid JSON file.');
+    }
+
+    if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
+        throw new Error('JSON must contain a "data" object mapping file URIs to tag arrays.');
+    }
+
+    const failures: string[] = [];
+    const applied: string[] = [];
+
+    for (const [fileKey, tags] of Object.entries(parsed.data)) {
+        if (typeof fileKey !== 'string' || fileKey.trim().length === 0) {
+            failures.push(`Invalid file key: ${String(fileKey)}`);
+            continue;
+        }
+
+        if (!Array.isArray(tags)) {
+            failures.push(`${fileKey}: tags value is not an array`);
+            continue;
+        }
+
+        // normalize and validate tag entries
+        const tagStrings = tags
+            .map(t => (t === null || t === undefined) ? '' : String(t).trim())
+            .filter(t => t.length > 0);
+
+        const invalidTags = tagStrings.filter(t => /\s/.test(t));
+        if (invalidTags.length > 0) {
+            failures.push(`${fileKey}: invalid tags (contain spaces): ${invalidTags.join(', ')}`);
+            continue;
+        }
+
+        try {
+            const success = await setFileTags(fileKey, tagStrings, workspaceState);
+            if (success) {
+                applied.push(fileKey);
+            } else {
+                failures.push(`${fileKey}: setFileTags returned false (validation failed)`);
+            }
+        } catch (err: any) {
+            failures.push(`${fileKey}: error saving tags - ${err?.toString() ?? err}`);
+        }
+    }
+
+    if (provider) {
+        provider.refresh();
+    }
+
+    const summary = `Import complete: ${applied.length} applied, ${failures.length} failed.`;
+    if (failures.length === 0) {
+        vscode.window.showInformationMessage(summary);
+    } else {
+        // show short summary and offer details
+        const firstFailure = failures.slice(0, 5).join('; ');
+        vscode.window.showWarningMessage(`${summary} Examples: ${firstFailure}`);
+    }
 }
 
 /**

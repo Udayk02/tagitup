@@ -47,6 +47,14 @@
       {
         "command": "tagitup.searchByTags",
         "title": "TagitUp: Search Files by Tags"
+      },
+      {
+        "command": "tagitup.exportTags",
+        "title": "TagitUp: Export Tags into a JSON file"
+      },
+      {
+        "command": "tagitup.importTags",
+        "title": "TagitUp: Import Tags from a JSON file"
       }
     ],
     "viewsContainers": {
