@@ -24,6 +24,7 @@ Note: There are a bunch of features that I can do further. Will do when time per
 *   **Search:** Find files using tag expressions (& - AND, | - OR, () - grouping. See, dummy, you can't use commas here).
 *   **Persistence:** Tags are saved within your VS Code workspace state, persisting across sessions for that workspace (NBD, everything is handled by VS Code).
 *   **File Management:** Automatically handles tag migration on file rename and cleanup on file deletion (within VS Code. Outside VS Code, you can hit refresh.).
+*   **Export/Import tags**: You can export tags into a JSON file so that you can import them into another workspace or another device by using the same JSON file. 
 
 ## Usage
 
@@ -51,6 +52,8 @@ Note: There are a bunch of features that I can do further. Will do when time per
         *   Select a file from the results to open it.
     *   **`TagitUp: Refresh View`**: Manually refreshes the TagitUp view contents.
     *   **`TagitUp: Clear All Tags`**: Removes *all* tags from *all* files in the workspace state (requires confirmation). Use with caution!
+    *   **`TagitUp: Export Tags into a JSON file`**: Export all tags into a JSON file with certain format that can be imported.
+    *   **`TagitUp: Import Tags from a JSON file`**: Import tags from a JSON file and merge them with existing tags. Only tags with under a valid format are imported.
 
 ## Contributing
 
